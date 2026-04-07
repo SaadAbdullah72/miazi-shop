@@ -67,11 +67,11 @@ app.use('/api/upload', uploadRoutes);
 
 // Serve Frontend in Production
 if (process.env.NODE_ENV === 'production') {
-    const __dirname = path.resolve();
-    app.use(express.static(path.join(__dirname, '/client/dist')));
+    const rootPath = path.resolve();
+    app.use(express.static(path.join(rootPath, 'client', 'dist')));
 
     app.get('*', (req, res) =>
-        res.sendFile(path.resolve(__dirname, 'client', 'dist', 'index.html'))
+        res.sendFile(path.resolve(rootPath, 'client', 'dist', 'index.html'))
     );
 } else {
     app.get('/', (req, res) => {
