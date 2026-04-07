@@ -31,8 +31,13 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         
-        const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', process.env.CLIENT_URL];
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost:')) {
+        const allowedOrigins = [
+            'http://localhost:5173', 
+            'http://localhost:5174', 
+            'https://miazi-shop.vercel.app',
+            process.env.CLIENT_URL
+        ];
+        if (allowedOrigins.indexOf(origin) !== -1 || (origin && origin.startsWith('http://localhost:'))) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
