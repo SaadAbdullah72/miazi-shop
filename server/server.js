@@ -65,20 +65,10 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Serve Frontend in Production
-if (process.env.NODE_ENV === 'production') {
-    const rootPath = process.cwd();
-    app.use(express.static(path.join(rootPath, 'client', 'dist')));
-
-    // Use Express 5 compatible catch-all
-    app.get('(.*)', (req, res) =>
-        res.sendFile(path.resolve(rootPath, 'client', 'dist', 'index.html'))
-    );
-} else {
-    app.get('/', (req, res) => {
-        res.send('MIAZI SHOP API is running...');
-    });
-}
+// Server running check route for Vercel
+app.get('/', (req, res) => {
+    res.send('MIAZI SHOP API is running...');
+});
 
 // Error Handling Middleware
 app.use(notFound);
