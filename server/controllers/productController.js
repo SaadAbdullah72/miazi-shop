@@ -30,11 +30,22 @@ const getProducts = asyncHandler(async (req, res) => {
     res.json({ products, page, pages: Math.ceil(count / pageSize) });
 });
 
-// @desc    Fetch single product
+// @desc    Fetch single product by ID or Slug
 // @route   GET /api/products/:id
 // @access  Public
 const getProductById = asyncHandler(async (req, res) => {
-    const product = await Product.findById(req.params.id).populate('category', 'name slug');
+    const { id } = req.params;
+    let product;
+
+    // Check if the provided ID is a valid MongoDB ObjectId
+    const isObjectId = id.match(/^[0-9a-fA-F]{24}$/);
+
+    if (isObjectId) {
+        product = await Product.findById(id).populate('category', 'name slug');
+    } else {
+        // If not a valid ID, search by Slug
+        product = await Product.findOne({ slug: id }).populate('category', 'name slug');
+    }
 
     if (product) {
         res.json(product);

@@ -1,155 +1,215 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { listProducts } from '../slices/productSlice';
-import { addToCart } from '../slices/cartSlice';
-import { Link, useSearchParams } from 'react-router-dom';
-import { ShoppingBag, Star, Loader } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { Link, useLocation } from 'react-router-dom';
+import { ShoppingBag, ChevronRight, Star, List } from 'lucide-react';
 import { BASE_URL } from '../utils/axiosConfig';
 
 const HomePage = () => {
     const dispatch = useDispatch();
-    const [searchParams] = useSearchParams();
-    const keyword = searchParams.get('keyword') || '';
-
-    const { loading, error, products, pages, page } = useSelector((state) => state.product);
+    const { products, loading, error } = useSelector((state) => state.product);
+    const location = useLocation();
+    
+    const searchParams = new URLSearchParams(location.search);
+    const keyword = searchParams.get('keyword');
+    const category = searchParams.get('category');
 
     useEffect(() => {
-        dispatch(listProducts({ keyword }));
-    }, [dispatch, keyword]);
-
-    const handleAddToCart = (product) => {
-        if (product.countInStock > 0) {
-            dispatch(addToCart({ ...product, qty: 1 }));
-            toast.success(`${product.name} added to cart!`);
-        } else {
-            toast.error('Out of stock!');
-        }
-    };
+        dispatch(listProducts({ 
+            keyword: keyword || '', 
+            category: category || '' 
+        }));
+    }, [dispatch, keyword, category]);
 
     return (
-        <div className="font-sans text-[#333e48] min-h-screen">
-            {/* Hero Banner */}
-            {!keyword && (
-                <div className="bg-gradient-to-r from-[#fed700] to-[#f5c800] py-8 md:py-12 lg:py-20 mb-8 overflow-hidden">
-                    <div className="container-custom flex flex-col lg:flex-row items-center justify-between gap-8">
-                        <div className="max-w-lg text-center lg:text-left">
-                            <p className="text-[10px] md:text-sm font-bold uppercase tracking-[0.2em] text-[#333e48] mb-3 opacity-90">MIAZI SHOP — Premium Electronics</p>
-                            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-[#333e48] leading-tight mb-5 px-4 lg:px-0">
-                                Best Deals on <br className="hidden sm:block" />Your Favorite Tech
+        <div className="bg-electro-bg min-h-screen pb-20">
+            
+            {/* PREMIUM ELECTRO HERO SLIDER */}
+            {!keyword && !category && (
+                <section className="relative py-16 md:py-24 mb-12 overflow-hidden shadow-sm border-b border-gray-200">
+                    <div className="absolute inset-0 z-0">
+                        <img src="/hero_bg.png" alt="tech background" className="w-full h-full object-cover opacity-20" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-gray-50/98 via-gray-50/90 to-emerald-50/60"></div>
+                    </div>
+                    
+                    <div className="container-custom flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
+                        <div className="flex-1 max-w-xl animate-fade-in-up">
+                            <div className="text-[14px] font-bold text-electro-blue uppercase tracking-widest mb-4">The New Standard</div>
+                            <h1 className="text-4xl md:text-6xl font-sans font-light text-electro-dark leading-tight mb-6">
+                                <span className="font-bold block">Under Favorable</span> Smartphones
                             </h1>
-                            <p className="text-[#333e48] text-base md:text-lg mb-8 opacity-80 px-6 lg:px-0">
-                                Shop the latest smartphones, laptops, cameras and more at unbeatable prices with official warranty.
-                            </p>
-                            <Link to="/?keyword=" className="inline-block bg-[#333e48] text-white px-10 py-4 rounded-full font-bold hover:bg-black transition shadow-xl hover:-translate-y-1 transform duration-300">
-                                Shop Now
+                            <div className="text-xl text-electro-text mb-8 flex items-center gap-2">
+                                <span className="text-sm">From</span> <span className="font-bold">৳15,000</span>
+                            </div>
+                            <Link to="/?category=smartphone" className="btn-electro text-sm bg-electro-yellow hover:bg-black hover:text-white px-8 py-3 rounded-full font-bold shadow-md hover:shadow-lg transition">
+                                START BUYING
                             </Link>
                         </div>
-                        <div className="w-full lg:w-1/2 px-4 lg:px-0 relative">
-                            <div className="absolute -inset-4 bg-white/20 blur-3xl rounded-full" />
-                            <img 
-                                src="https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=800&q=80" 
-                                alt="Electronics" 
-                                className="relative w-full max-w-lg mx-auto rounded-3xl shadow-2xl object-cover aspect-[4/3] md:aspect-video lg:aspect-auto"
-                            />
+                        <div className="flex-1 right-img relative flex justify-end pr-10">
+                             <img 
+                                src="/hero_phone.png" 
+                                alt="Premium Flagship Smartphone" 
+                                className="max-w-[70%] md:max-w-[95%] h-auto object-contain transition-all duration-1000 hover:scale-110 drop-shadow-[0_20px_60px_rgba(0,0,0,0.3)] z-10 mix-blend-multiply [mask-image:linear-gradient(to_right,transparent_0%,black_15%,black_100%)] filter contrast-[1.1] brightness-[1.05]"
+                             />
                         </div>
                     </div>
-                </div>
+                </section>
             )}
 
-            <div className="container-custom pb-16">
-                {keyword && (
-                    <div className="mb-6 flex items-center gap-4">
-                        <h2 className="text-xl font-bold">Search results for: "{keyword}"</h2>
-                        <Link to="/" className="text-sm text-blue-600 hover:underline">Clear Search</Link>
-                    </div>
+            {/* MAIN CATALOG AREA */}
+            <section id="shop-section" className="bg-gray-50/50 py-10 border-t border-gray-200">
+                <div className="container-custom flex flex-col lg:flex-row gap-8">
+                
+                {/* LEFT SIDEBAR (Electro features sidebars heavily) */}
+                {!keyword && !category && (
+                    <aside className="w-full lg:w-1/4 flex flex-col gap-8 hidden lg:flex">
+                        
+                        {/* Categories Widget */}
+                        <div className="bg-white border border-electro-border rounded p-5">
+                            <h3 className="font-bold text-electro-dark border-b border-electro-border pb-3 mb-4 flex items-center gap-2">
+                               <List size={18} /> Browse Categories
+                            </h3>
+                            <ul className="space-y-3">
+                                {['Smartphones', 'Laptops', 'Audio', 'Accessories', 'Smartwatches'].map(cat => (
+                                    <li key={cat}>
+                                        <Link to={`/?category=${cat.toLowerCase()}`} className="text-sm text-electro-text hover:text-electro-yellow flex items-center justify-between group transition">
+                                            {cat} <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Latest Products Widget Parody */}
+                        <div className="bg-white border border-electro-border rounded p-5">
+                            <h3 className="font-bold text-electro-dark border-b border-electro-border pb-3 mb-4">
+                               Latest Products
+                            </h3>
+                            <div className="space-y-4">
+                                {products?.slice(0, 3).map(p => (
+                                    <Link key={p._id} to={`/product/${p.slug}`} className="flex items-center gap-4 group">
+                                        <img 
+                                            src={p.images?.[0] ? (p.images[0].startsWith('http') ? p.images[0] : `${BASE_URL}${p.images[0]}`) : 'https://placehold.co/100x100/FFFFFF/333e48?text=Product'}
+                                            className="w-16 h-16 object-contain border border-electro-border rounded p-1 group-hover:border-electro-yellow transition mix-blend-multiply" 
+                                            alt={p.name} 
+                                        />
+                                        <div>
+                                            <div className="text-xs text-electro-blue group-hover:underline line-clamp-2 leading-tight">{p.name}</div>
+                                            <div className="font-bold text-electro-dark text-sm mt-1">৳{p.price}</div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+
+                    </aside>
                 )}
 
-                <h2 className="text-2xl font-extrabold mb-6 border-b-2 border-[#fed700] pb-2 inline-block">
-                    {keyword ? 'Results' : 'Featured Products'}
-                </h2>
+                {/* RIGHT PRODUCT GRID - ENHANCED POLISH */}
+                <div className={`w-full ${(keyword || category) ? 'lg:w-full' : 'lg:w-3/4'}`}>
+                    
+                    {/* Header bar */}
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 border-b border-electro-border pb-6">
+                        <div className="space-y-1">
+                             <div className="flex items-center gap-2 text-electro-blue text-[10px] font-bold uppercase tracking-[0.2em]">
+                                <List size={14} /> Recommended for you
+                             </div>
+                             <h2 className="text-3xl font-bold text-electro-dark tracking-tight">
+                                {keyword ? `Search Results for "${keyword}"` : category ? `${category.toUpperCase()}` : 'Best Sellers'}
+                             </h2>
+                        </div>
+                        <div className="flex items-center gap-6">
+                            <div className="text-sm text-gray-400 font-medium">
+                                Showing <span className="text-electro-dark font-bold">{products?.length || 0}</span> results
+                            </div>
+                            <Link to="/" className="group flex items-center gap-2 text-sm font-bold text-electro-blue hover:text-electro-dark transition-all">
+                                VIEW ALL <div className="p-1 px-3 bg-electro-yellow rounded-full text-electro-dark group-hover:bg-black group-hover:text-white transition-all"><ChevronRight size={14} /></div>
+                            </Link>
+                        </div>
+                    </div>
 
-                {loading ? (
-                    <div className="flex justify-center items-center py-20">
-                        <Loader size={40} className="animate-spin text-[#fed700]" />
-                        <span className="ml-4 text-gray-500 font-semibold">Loading products...</span>
-                    </div>
-                ) : error ? (
-                    <div className="text-center py-16 bg-red-50 rounded-xl border border-red-200">
-                        <p className="text-red-500 font-bold text-lg mb-2">Failed to load products</p>
-                        <p className="text-gray-500 text-sm">{error}</p>
-                        <p className="text-gray-400 text-sm mt-4">Make sure the backend server is running on port 5000 and MongoDB is connected.</p>
-                    </div>
-                ) : products.length === 0 ? (
-                    <div className="text-center py-16 bg-gray-50 rounded-xl border">
-                        <p className="text-gray-500 text-lg mb-2">No products found</p>
-                        <p className="text-gray-400 text-sm">Products will appear here once added via the Admin Panel.</p>
-                        {keyword && <Link to="/" className="text-blue-600 hover:underline mt-4 inline-block">Back to All Products</Link>}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                        {products.map((product) => (
-                            <div key={product._id} className="bg-white border rounded-xl overflow-hidden group hover:shadow-lg transition-shadow duration-300">
-                                {/* Product Image */}
-                                <Link to={`/product/${product._id}`} className="block relative aspect-[4/3] bg-gray-50 overflow-hidden">
-                                    <img 
-                                        src={product.images?.[0]?.startsWith('http') ? product.images[0] : `${BASE_URL}${product.images?.[0]}` || 'https://via.placeholder.com/400x400?text=No+Image'}
-                                        alt={product.name}
-                                        className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
-                                    />
-                                    {product.discountPrice > 0 && (
-                                        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                                            {Math.round(((product.price - product.discountPrice) / product.price) * 100)}% OFF
-                                        </span>
-                                    )}
-                                    {product.countInStock === 0 && (
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                            <span className="bg-white text-red-500 font-bold px-4 py-2 rounded-full text-sm">Out of Stock</span>
+                    {loading ? (
+                        <div className="flex flex-col justify-center items-center h-80 bg-white/50 rounded-2xl border border-gray-100 shadow-inner">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-electro-yellow mb-4"></div>
+                            <span className="text-xs font-bold uppercase tracking-widest text-gray-400 animate-pulse">Syncing Inventory...</span>
+                        </div>
+                    ) : error ? (
+                        <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-100">
+                            {error}
+                        </div>
+                    ) : (!products || products.length === 0) ? (
+                        <div className="text-center py-20 bg-white border border-electro-border rounded-xl">
+                            <h3 className="text-xl text-electro-dark font-bold mb-2 text-center w-full">No products found</h3>
+                            <p className="text-electro-text">Try adjusting your search or category filter.</p>
+                            <Link to="/" className="inline-block mt-6 text-electro-blue hover:underline">Clear all filters</Link>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-0 border-t border-l border-electro-border bg-white rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+                            {products.map((p, idx) => (
+                                <Link to={`/product/${p.slug}`} key={p._id} className="electro-product-card group relative overflow-hidden">
+                                    
+                                    {/* Badges */}
+                                    {idx < 2 && (
+                                        <div className="absolute top-4 left-4 z-20 flex flex-col gap-1">
+                                            <span className="bg-red-600 text-white text-[9px] font-bold px-3 py-1 rounded-full shadow-md uppercase tracking-widest">SALE</span>
+                                            {idx === 0 && <span className="bg-electro-yellow text-electro-dark text-[9px] font-bold px-3 py-1 rounded-full shadow-md uppercase tracking-widest">HOT</span>}
                                         </div>
                                     )}
-                                </Link>
 
-                                {/* Product Info */}
-                                <div className="p-4">
-                                    <p className="text-[11px] text-gray-400 uppercase mb-1">{product.category?.name || 'Electronics'}</p>
-                                    <Link to={`/product/${product._id}`} className="block">
-                                        <h3 className="text-sm font-bold text-[#333e48] leading-tight mb-2 line-clamp-2 hover:text-blue-600 transition">{product.name}</h3>
-                                    </Link>
+                                    {/* Category */}
+                                    <div className="electro-product-category">
+                                        {p.category?.name || p.category || 'Electronics'}
+                                    </div>
                                     
-                                    {/* Rating */}
-                                    <div className="flex items-center gap-1 mb-2">
-                                        {[...Array(5)].map((_, i) => (
-                                            <Star key={i} size={12} className={i < Math.round(product.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} />
-                                        ))}
-                                        <span className="text-xs text-gray-400 ml-1">({product.numReviews})</span>
+                                    {/* Title */}
+                                    <h3 className="electro-product-title" title={p.name}>
+                                        {p.name}
+                                    </h3>
+
+                                    {/* Image */}
+                                    <div className="relative flex-grow flex items-center justify-center my-4 overflow-hidden">
+                                        <img 
+                                            src={p.images?.[0] ? (p.images[0].startsWith('http') ? p.images[0] : `${BASE_URL}${p.images[0]}`) : 'https://placehold.co/400x400/FFFFFF/333e48?text=Product'}
+                                            alt={p.name}
+                                            className="electro-product-img mix-blend-multiply group-hover:scale-110 transition-transform duration-700 p-2"
+                                        />
                                     </div>
 
-                                    {/* Price */}
-                                    <div className="flex items-center gap-2 mb-3">
-                                        {product.discountPrice > 0 ? (
-                                            <>
-                                                <span className="text-lg font-extrabold text-[#333e48]">৳{product.discountPrice.toLocaleString()}</span>
-                                                <span className="text-sm text-gray-400 line-through">৳{product.price.toLocaleString()}</span>
-                                            </>
-                                        ) : (
-                                            <span className="text-lg font-extrabold text-[#333e48]">৳{product.price.toLocaleString()}</span>
-                                        )}
+                                    {/* Price & Rating */}
+                                    <div className="mt-auto">
+                                        <div className="flex items-center gap-1 mb-2">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star key={i} size={10} className={i < Math.round(p.rating || 0) ? 'fill-electro-yellow text-electro-yellow' : 'text-gray-200'} />
+                                            ))}
+                                            <span className="text-[10px] text-gray-400 ml-1 font-bold">({p.numReviews || 0})</span>
+                                        </div>
+
+                                        <div className="electro-product-price mb-4 italic">
+                                            ৳{p.price}
+                                        </div>
+                                        
+                                        {/* Hover Cart Action */}
+                                        <div className="electro-cart-action">
+                                            <button 
+                                                className="w-full btn-electro-pill text-[10px] flex items-center justify-center py-2.5 shadow-md"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    // Add to cart dispatch
+                                                }}
+                                            >
+                                                <ShoppingBag size={14} className="mr-2" strokeWidth={2.5} /> Add to Cart
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    {/* Add to Cart Button */}
-                                    <button 
-                                        onClick={() => handleAddToCart(product)}
-                                        disabled={product.countInStock === 0}
-                                        className="w-full bg-[#fed700] text-[#333e48] font-bold py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-yellow-500 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-                                    >
-                                        <ShoppingBag size={16} /> Add to Cart
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
+                </div>
+                </div>
+            </section>
         </div>
     );
 };
