@@ -1,73 +1,157 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { login, register } from '../slices/authSlice';
-import { Loader } from 'lucide-react';
+import { login, googleLogin } from '../slices/authSlice';
+import { toast } from 'react-toastify';
+import { Loader, User, Lock, Mail, ChevronRight, LogIn } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [isRegistering, setIsRegistering] = useState(false);
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { search } = useLocation();
-    const redirect = new URLSearchParams(search).get('redirect') || '/';
 
     const { userInfo, loading, error } = useSelector((state) => state.auth);
 
+    const { search } = useLocation();
+    const sp = new URLSearchParams(search);
+    const redirect = sp.get('redirect') || '/';
+
     useEffect(() => {
         if (userInfo) {
-            navigate(redirect);
+            if (userInfo.isAdmin) {
+                navigate('/admin/dashboard');
+            } else {
+                navigate(redirect);
+            }
         }
-    }, [navigate, userInfo, redirect]);
+    }, [navigate, redirect, userInfo]);
 
-    const submitHandler = (e) => {
+    const submitHandler = async (e) => {
         e.preventDefault();
-        if (isRegistering) {
-            dispatch(register({ name, email, password }));
-        } else {
-            dispatch(login({ email, password }));
+        try {
+            await dispatch(login({ email, password })).unwrap();
+            toast.success('Successfully logged in.');
+        } catch (err) {
+            toast.error(err.message || 'Invalid credentials');
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+        const decoded = jwtDecode(credentialResponse.credential);
+        try {
+            await dispatch(googleLogin({
+                name: decoded.name,
+                email: decoded.email,
+                googleId: decoded.sub,
+                image: decoded.picture
+            })).unwrap();
+            toast.success('Successfully logged in via Google.');
+        } catch (err) {
+            toast.error(err.message || 'Google Login failed');
         }
     };
 
     return (
-        <div className="container-custom py-12 max-w-md mx-auto">
-            <h1 className="text-2xl font-extrabold mb-6 text-center">{isRegistering ? 'Create Account' : 'Sign In'}</h1>
-            <form onSubmit={submitHandler} className="bg-white p-6 rounded-xl border flex flex-col gap-4">
-                {error && <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm font-semibold">{error}</div>}
-                
-                {isRegistering && (
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
-                        <input type="text" required placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)}
-                            className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
+        <div className="bg-gray-50 min-h-screen pb-20 font-sans">
+            {/* Breadcrumb - Restored Original Style */}
+            <div className="bg-white border-b border-gray-200 mb-12">
+                <div className="container-custom py-4 flex items-center gap-2 text-sm text-gray-500">
+                    <Link to="/" className="hover:text-yellow-500">Home</Link>
+                    <ChevronRight size={14} />
+                    <span className="text-gray-800 font-bold">Sign In</span>
+                </div>
+            </div>
+
+            <div className="container-custom">
+                <div className="max-w-md mx-auto">
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-gray-100 bg-gray-50">
+                            <h1 className="text-xl font-bold text-gray-800 uppercase tracking-tight flex items-center gap-2">
+                                <LogIn size={20} className="text-yellow-500" /> Account Login
+                            </h1>
+                        </div>
+                        
+                        <div className="p-8">
+                            <form onSubmit={submitHandler} className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest pl-1">Email Address</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                            <Mail size={16} />
+                                        </div>
+                                        <input
+                                            type="email"
+                                            className="w-full bg-white border border-gray-200 p-3 pl-10 rounded-lg outline-none focus:border-yellow-400 text-sm font-semibold transition-all"
+                                            placeholder="name@example.com"
+                                            value={email}
+                                            required
+                                            onChange={(e) => setEmail(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest pl-1">Password</label>
+                                        <Link to="/forgot-password" size={10} className="text-[10px] text-blue-600 font-bold uppercase hover:underline">Forgot?</Link>
+                                    </div>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                            <Lock size={16} />
+                                        </div>
+                                        <input
+                                            type="password"
+                                            className="w-full bg-white border border-gray-200 p-3 pl-10 rounded-lg outline-none focus:border-yellow-400 text-sm font-semibold transition-all"
+                                            placeholder="••••••••"
+                                            value={password}
+                                            required
+                                            onChange={(e) => setPassword(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="bg-slate-900 text-white w-full h-12 uppercase font-black text-xs tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 hover:bg-yellow-500 hover:text-slate-900 transition-all shadow-xl shadow-slate-100 mt-4 rounded-lg"
+                                >
+                                    {loading ? <Loader size={20} className="animate-spin" /> : 'Sign In Now'}
+                                </button>
+                            </form>
+
+                            <div className="mt-8">
+                                <div className="relative flex items-center justify-center mb-8">
+                                    <div className="border-t border-gray-100 absolute w-full" />
+                                    <span className="bg-white px-4 text-[11px] font-bold text-gray-400 uppercase relative z-10">Social Access</span>
+                                </div>
+                                
+                                <div className="flex justify-center">
+                                    <GoogleLogin 
+                                        onSuccess={handleGoogleSuccess}
+                                        onError={() => toast.error('Google Access Denied')}
+                                        useOneTap
+                                        theme="outline"
+                                        shape="pill"
+                                        width="350"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                )}
-                <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Email Address</label>
-                    <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)}
-                        className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
+                    
+                    <div className="mt-8 text-center bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-sm text-gray-500 mb-2 font-medium uppercase tracking-wide">New To Miazi Shop?</p>
+                        <Link 
+                            to={redirect ? `/register?redirect=${redirect}` : '/register'} 
+                            className="text-xs font-black text-blue-600 uppercase hover:underline inline-block border-2 border-blue-600 px-8 py-2 rounded-full hover:bg-blue-600 hover:text-white transition-all"
+                        >
+                            Construct My Account
+                        </Link>
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
-                    <input type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)}
-                        className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
-                </div>
-                <button disabled={loading} type="submit"
-                    className="w-full bg-[#fed700] text-[#333e48] font-extrabold py-3 rounded-full mt-2 hover:bg-yellow-500 transition shadow disabled:opacity-50 flex items-center justify-center gap-2">
-                    {loading && <Loader size={18} className="animate-spin" />}
-                    {loading ? 'Please wait...' : (isRegistering ? 'Create Account' : 'Sign In')}
-                </button>
-                <div className="text-center mt-2 text-sm text-gray-600">
-                    {isRegistering ? 'Already have an account? ' : 'New here? '}
-                    <button type="button" onClick={() => { setIsRegistering(!isRegistering); }}
-                        className="text-blue-600 font-bold hover:underline">
-                        {isRegistering ? 'Sign In' : 'Create Account'}
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     );
 };

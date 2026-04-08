@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import Product from '../models/productModel.js';
+import Category from '../models/categoryModel.js';
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -18,8 +19,10 @@ const getProducts = asyncHandler(async (req, res) => {
         : {};
 
     const categoryFilter = req.query.category ? { category: req.query.category } : {};
+    const trendingFilter = req.query.isTrending === 'true' ? { isTrending: true } : {};
+    const dealsFilter = req.query.isDeals === 'true' ? { discountPrice: { $gt: 0 } } : {};
 
-    const filterOptions = { ...keyword, ...categoryFilter };
+    const filterOptions = { ...keyword, ...categoryFilter, ...trendingFilter, ...dealsFilter };
 
     const count = await Product.countDocuments(filterOptions);
     const products = await Product.find(filterOptions)
@@ -30,11 +33,22 @@ const getProducts = asyncHandler(async (req, res) => {
     res.json({ products, page, pages: Math.ceil(count / pageSize) });
 });
 
-// @desc    Fetch single product
+// @desc    Fetch single product by ID or Slug
 // @route   GET /api/products/:id
 // @access  Public
 const getProductById = asyncHandler(async (req, res) => {
-    const product = await Product.findById(req.params.id).populate('category', 'name slug');
+    const { id } = req.params;
+    let product;
+
+    // Check if the provided ID is a valid MongoDB ObjectId
+    const isObjectId = id.match(/^[0-9a-fA-F]{24}$/);
+
+    if (isObjectId) {
+        product = await Product.findById(id).populate('category', 'name slug');
+    } else {
+        // If not a valid ID, search by Slug
+        product = await Product.findOne({ slug: id }).populate('category', 'name slug');
+    }
 
     if (product) {
         res.json(product);
@@ -48,21 +62,29 @@ const getProductById = asyncHandler(async (req, res) => {
 // @route   POST /api/products
 // @access  Private/Admin
 const createProduct = asyncHandler(async (req, res) => {
+    const { name, price, discountPrice, description, images, brand, category, countInStock, isFeatured, isTrending } = req.body;
+
+    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
+
     const product = new Product({
-        name: 'Sample name',
-        slug: 'sample-name-' + Date.now(),
-        price: 99.99,
+        name,
+        slug,
+        price: Number(price),
+        discountPrice: Number(discountPrice) || 0,
         user: req.user._id,
-        images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80'],
-        brand: 'Sample brand',
-        category: req.body.categoryId, // Ensure a valid category id is passed or replace with hardcoded if testing
-        countInStock: 0,
+        images: images && images.length > 0 ? images : ['https://via.placeholder.com/400'],
+        brand,
+        category,
+        countInStock: Number(countInStock) || 0,
         numReviews: 0,
-        description: 'Sample description',
+        description,
+        isFeatured: isFeatured || false,
+        isTrending: isTrending || false,
     });
 
     const createdProduct = await product.save();
-    res.status(201).json(createdProduct);
+    const populated = await createdProduct.populate('category', 'name slug');
+    res.status(201).json(populated);
 });
 
 // @desc    Update a product
@@ -162,6 +184,27 @@ const createProductReview = asyncHandler(async (req, res) => {
     }
 });
 
+// @desc    Get product suggestions for search bar
+// @route   GET /api/products/suggestions
+// @access  Public
+const getProductSuggestions = asyncHandler(async (req, res) => {
+    const keyword = req.query.keyword
+        ? {
+            name: {
+                $regex: req.query.keyword,
+                $options: 'i',
+            },
+        }
+        : {};
+
+    const products = await Product.find({ ...keyword })
+        .populate('category', 'name slug')
+        .select('name slug images category price')
+        .limit(8);
+
+    res.json(products);
+});
+
 export {
     getProducts,
     getProductById,
@@ -169,4 +212,5 @@ export {
     updateProduct,
     deleteProduct,
     createProductReview,
+    getProductSuggestions,
 };

@@ -1,25 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { ShoppingBag, Heart, Search, Menu, User, PhoneCall, ChevronDown, X } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../slices/authSlice';
+import { listCategories } from '../slices/categorySlice';
+import api from '../utils/axiosConfig';
+import {
+    ShoppingBag, Search, Menu, User, MapPin,
+    Truck, RefreshCw, Heart, ChevronDown, LayoutDashboard
+} from 'lucide-react';
+import { toast } from 'react-toastify';
+import { BASE_URL } from '../utils/axiosConfig';
 
 const Header = () => {
+    const [keyword, setKeyword] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isDeptOpen, setIsDeptOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+
     const { cartItems } = useSelector((state) => state.cart);
     const { userInfo } = useSelector((state) => state.auth);
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-    const [keyword, setKeyword] = useState('');
-    const [mobileMenu, setMobileMenu] = useState(false);
-    const [userDropdown, setUserDropdown] = useState(false);
+    const { categories } = useSelector((state) => state.category);
 
-    const logoutHandler = () => {
-        dispatch(logout());
-        setUserDropdown(false);
-        navigate('/');
-    };
+    useEffect(() => {
+        dispatch(listCategories());
+    }, [dispatch]);
 
-    const searchHandler = (e) => {
+    // Debounced Search Suggestions
+    useEffect(() => {
+        const fetchSuggestions = async () => {
+            if (keyword.trim().length > 1) {
+                try {
+                    const { data } = await api.get(`/api/products/suggestions?keyword=${keyword}`);
+                    setSuggestions(data);
+                    setShowSuggestions(true);
+                } catch (err) {
+                    console.error(err);
+                }
+            } else {
+                setSuggestions([]);
+                setShowSuggestions(false);
+            }
+        };
+
+        const timer = setTimeout(fetchSuggestions, 300);
+        return () => clearTimeout(timer);
+    }, [keyword]);
+
+    const handleSearch = (e) => {
         e.preventDefault();
         if (keyword.trim()) {
             navigate(`/?keyword=${keyword}`);
@@ -28,125 +59,183 @@ const Header = () => {
         }
     };
 
-    const cartQty = cartItems.reduce((a, c) => a + c.qty, 0);
-    const cartTotal = cartItems.reduce((a, c) => a + c.qty * c.price, 0).toFixed(2);
+    const logoutHandler = () => {
+        dispatch(logout());
+        navigate('/login');
+        toast.info('Signed out successfully.');
+    };
+
+    const departments = categories.length > 0
+        ? categories.map(c => ({ name: c.name, id: c._id }))
+        : [{ name: 'No categories yet', id: '' }];
 
     return (
-        <header className="w-full font-sans bg-white sticky top-0 z-50 shadow-sm">
-            {/* Top Bar */}
-            <div className="bg-[#333e48] text-xs text-gray-300 hidden md:block">
-                <div className="container-custom flex justify-between items-center h-9">
-                    <div>Welcome to MIAZI SHOP — Your One-Stop Electronics Store</div>
-                    <div className="flex gap-4 items-center">
-                        <span className="flex items-center gap-1">
-                            <PhoneCall size={12} /> +880 1612-893871
-                        </span>
+        <header className="w-full bg-white font-sans">
+            {/* TIER 1: TOP BAR */}
+            <div className="border-b border-gray-100 hidden md:block">
+                <div className="max-w-7xl mx-auto px-4 flex justify-between items-center py-2 text-[12px] text-gray-500">
+                    <div>Welcome to Worldwide Electronics Store</div>
+                    <div className="flex items-center gap-4">
+                        <Link to="#" className="flex items-center gap-1 hover:text-yellow-500"><MapPin size={14} /> Store Locator</Link>
+                        <span className="text-gray-200">|</span>
+                        <Link to="/orders" className="flex items-center gap-1 hover:text-yellow-500"><Truck size={14} /> Track Your Order</Link>
+                        <span className="text-gray-200">|</span>
+                        <div className="flex items-center gap-1">Dollar (US) <ChevronDown size={10} /></div>
+                        <span className="text-gray-200">|</span>
+                        {userInfo ? (
+                            <div className="flex items-center gap-2">
+                                <span className="text-yellow-500 font-bold">{userInfo.email}</span>
+                                <span className="text-gray-200">|</span>
+                                <button onClick={logoutHandler} className="hover:text-yellow-500 font-bold">Logout</button>
+                            </div>
+                        ) : (
+                            <Link to="/login" className="hover:text-yellow-600 font-bold transition-colors">Register or Sign in</Link>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Main Header */}
-            <div className="py-4 border-b bg-white">
-                <div className="container-custom flex items-center justify-between gap-6">
-                    {/* Logo */}
-                    <Link to="/" className="flex items-center min-w-[160px] shrink-0">
-                        <img src="/logo.png" alt="MIAZI SHOP" className="h-[50px] object-contain" />
-                    </Link>
+            {/* TIER 2: LOGO & SEARCH */}
+            <div className="max-w-7xl mx-auto px-4 py-3 md:py-5 flex items-center justify-between gap-4 md:gap-10">
+                {/* Logo Area */}
+                <Link to="/" className="flex items-center flex-shrink-0 group">
+                    <div className=" h-16 w-16 rounded-full flex items-center justify-center shadow-md">
+                        <img src="logo.png" alt="Logo" className="h-12 w-12 object-contain mix-blend-multiply" />
+                    </div>
+                </Link>
 
-                    {/* Search Bar */}
-                    <form onSubmit={searchHandler} className="hidden md:flex flex-grow max-w-2xl items-center border-2 border-[#fed700] rounded-full overflow-hidden bg-white h-11">
+                {/* Mobile Icons */}
+                <div className="flex items-center gap-3 md:hidden">
+                    <Link to="/cart" className="relative text-gray-800">
+                        <ShoppingBag size={24} />
+                        {cartItems.length > 0 && (
+                            <span className="absolute -top-1 -right-2 bg-yellow-400 text-gray-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                                {cartItems.reduce((a, c) => a + c.qty, 0)}
+                            </span>
+                        )}
+                    </Link>
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-800 p-2"><Menu size={24} /></button>
+                </div>
+
+                {/* Main Search Bar - Restored Yellow Theme */}
+                <div className="flex-1 max-w-2xl hidden md:block relative">
+                    <form onSubmit={handleSearch} className="flex border-2 border-yellow-400 rounded-full h-11">
                         <input
                             type="text"
-                            placeholder="Search products..."
+                            className="flex-1 bg-transparent px-5 text-sm focus:outline-none"
+                            placeholder="Search for Products"
                             value={keyword}
                             onChange={(e) => setKeyword(e.target.value)}
-                            className="w-full px-5 py-2 outline-none text-gray-700 text-sm"
+                            onFocus={() => keyword.length > 1 && setShowSuggestions(true)}
+                            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                         />
-                        <button type="submit" className="bg-[#fed700] text-[#333e48] px-6 h-full flex justify-center items-center font-bold hover:bg-yellow-500 transition">
-                            <Search size={18} />
+                        <button type="submit" className="bg-yellow-400 px-6 rounded-r-full flex items-center justify-center hover:bg-gray-800 hover:text-white transition-colors">
+                            <Search size={20} />
                         </button>
                     </form>
 
-                    {/* Right Icons */}
-                    <div className="flex items-center gap-5">
-                        {/* User Account */}
-                        <div className="relative">
-                            {userInfo ? (
-                                <>
-                                    <button onClick={() => setUserDropdown(!userDropdown)} className="flex items-center gap-2 text-[#333e48] hover:text-[#fed700] transition">
-                                        <User size={22} />
-                                        <span className="hidden lg:block text-sm font-semibold">{userInfo.name.split(' ')[0]}</span>
-                                        <ChevronDown size={14} />
-                                    </button>
-                                    {userDropdown && (
-                                        <div className="absolute right-0 top-10 bg-white border rounded-lg shadow-xl w-48 py-2 z-50">
-                                            <Link to="/profile" onClick={() => setUserDropdown(false)} className="block px-4 py-2 text-sm hover:bg-gray-50 transition">My Profile</Link>
-                                            <Link to="/myorders" onClick={() => setUserDropdown(false)} className="block px-4 py-2 text-sm hover:bg-gray-50 transition">My Orders</Link>
-                                            {userInfo.isAdmin && (
-                                                <Link to="/admin/dashboard" onClick={() => setUserDropdown(false)} className="block px-4 py-2 text-sm hover:bg-gray-50 transition font-bold text-blue-600">Admin Panel</Link>
-                                            )}
-                                            <hr className="my-1" />
-                                            <button onClick={logoutHandler} className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition">Logout</button>
-                                        </div>
-                                    )}
-                                </>
-                            ) : (
-                                <Link to="/login" className="flex items-center gap-2 text-[#333e48] hover:text-[#fed700] transition">
-                                    <User size={22} />
-                                    <span className="hidden lg:block text-sm font-semibold">Login</span>
-                                </Link>
-                            )}
-                        </div>
-
-                        {/* Cart */}
-                        <Link to="/cart" className="flex items-center gap-2">
-                            <div className="relative text-[#333e48] hover:text-[#fed700] transition">
-                                <ShoppingBag size={24} />
-                                {cartQty > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-[#fed700] text-[#333e48] text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{cartQty}</span>
-                                )}
+                    {showSuggestions && suggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 bg-white mt-1 border border-gray-100 shadow-2xl rounded-xl z-[100] overflow-hidden">
+                            <div className="p-2 border-b border-gray-50 bg-gray-50 flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Suggestions</span>
+                                <span className="text-[10px] text-gray-400 px-2">{suggestions.length} found</span>
                             </div>
-                            <span className="hidden lg:block text-sm font-bold text-[#333e48]">৳{cartTotal}</span>
-                        </Link>
+                            <ul>
+                                {suggestions.map((p) => (
+                                    <li key={p._id}>
+                                        <button 
+                                            onMouseDown={(e) => { e.preventDefault(); navigate(`/?category=${p.category?._id || p.category}&keyword=${p.name}`); setKeyword(''); setShowSuggestions(false); }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-yellow-50 transition-colors text-left"
+                                        >
+                                            <div className="w-10 h-10 bg-gray-50 rounded flex items-center justify-center p-1 shrink-0">
+                                                <img 
+                                                    src={p.images?.[0] ? (p.images[0].startsWith('http') ? p.images[0] : `${BASE_URL}${p.images[0]}`) : 'https://placehold.co/100x100'} 
+                                                    alt="" className="max-w-full max-h-full object-contain mix-blend-multiply" 
+                                                />
+                                            </div>
+                                            <div className="min-w-0 text-left">
+                                                <p className="text-sm font-bold text-gray-800 truncate">{p.name}</p>
+                                                <p className="text-[10px] text-gray-400 uppercase font-bold">৳{p.price.toLocaleString()}</p>
+                                            </div>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
 
-                        {/* Mobile menu toggle */}
-                        <button className="md:hidden text-[#333e48]" onClick={() => setMobileMenu(!mobileMenu)}>
-                            {mobileMenu ? <X size={24} /> : <Menu size={24} />}
+                <div className="hidden md:flex items-center gap-5 text-gray-700">
+                    <RefreshCw size={22} className="cursor-pointer hover:text-yellow-500" />
+                    <div className="relative group flex items-center gap-4">
+                        {userInfo && userInfo.isAdmin && (
+                            <Link to="/admin/dashboard" className="hidden lg:flex items-center gap-2 bg-gray-800 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest hover:bg-yellow-500 transition-colors shadow-lg">
+                                <LayoutDashboard size={14} /> Dashboard
+                            </Link>
+                        )}
+                        <Link to="/profile">
+                            <User size={22} className="cursor-pointer hover:text-yellow-500" />
+                        </Link>
+                    </div>
+                    <Link to="/cart" className="flex items-center gap-2 group">
+                        <div className="relative">
+                            <ShoppingBag size={24} className="group-hover:text-yellow-500" />
+                            <span className="absolute -top-1 -right-2 bg-yellow-400 text-gray-900 text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                                {cartItems.reduce((a, c) => a + c.qty, 0)}
+                            </span>
+                        </div>
+                        <span className="font-bold text-sm text-gray-800 hidden lg:block">
+                            ৳{cartItems.reduce((a, c) => a + c.price * c.qty, 0).toLocaleString()}
+                        </span>
+                    </Link>
+                </div>
+            </div>
+
+            {/* TIER 3: NAV BAR */}
+            <div className="border-t border-gray-100 hidden md:block">
+                <div className="max-w-7xl mx-auto px-4 flex items-center h-12">
+                    <div className="relative w-64 h-full" onMouseEnter={() => setIsDeptOpen(true)} onMouseLeave={() => setIsDeptOpen(false)}>
+                        <button className="bg-yellow-400 w-full h-full flex items-center gap-3 px-5 font-bold text-sm text-gray-800 rounded-t-md">
+                            <Menu size={18} /> All Departments
                         </button>
+                        <div className={`absolute top-full left-0 w-full bg-white border border-gray-100 shadow-xl z-50 transition-all ${isDeptOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+                            <ul className="py-2">
+                                {departments.map(dept => (
+                                    <li key={dept.id || dept.name}>
+                                        <Link to={dept.id ? `/category/${dept.id}` : '#'} className="block px-5 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-yellow-600">
+                                            {dept.name}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <nav className="flex-1 flex items-center gap-8 px-8 h-full">
+                        <Link to="/" className="text-sm font-bold text-gray-700 hover:text-yellow-500">Products Inventory</Link>
+                        <Link to="/" className="text-sm font-bold text-gray-700 hover:text-yellow-500">Featured Brands</Link>
+                        <Link to="/?isTrending=true" className="text-sm font-bold text-gray-700 hover:text-yellow-500 transition-colors">Trending Styles</Link>
+                        <Link to="/" className="text-sm font-bold text-gray-700 hover:text-yellow-500 transition-colors">Gift Cards</Link>
+                    </nav>
+
+                    <div className="text-sm font-bold text-gray-700">
+                        Free Shipping on Orders <span className="text-red-500">৳50,000+</span>
                     </div>
                 </div>
             </div>
 
-            {/* Navigation */}
-            <nav className="bg-[#fed700] hidden md:block">
-                <div className="container-custom flex items-center h-12 text-[#333e48] font-semibold text-sm gap-8">
-                    <Link to="/" className="hover:text-white transition">Home</Link>
-                    <Link to="/?keyword=" className="hover:text-white transition">All Products</Link>
-                    <Link to="/cart" className="hover:text-white transition">Cart</Link>
-                    {userInfo && <Link to="/myorders" className="hover:text-white transition">My Orders</Link>}
-                    {userInfo?.isAdmin && <Link to="/admin/dashboard" className="hover:text-white transition font-bold">Admin Panel</Link>}
-                    <div className="ml-auto text-xs font-bold">Free Shipping on Orders ৳5000+</div>
-                </div>
-            </nav>
-
-            {/* Mobile Menu */}
-            {mobileMenu && (
-                <div className="md:hidden bg-white border-t shadow-lg p-4 flex flex-col gap-3">
-                    <form onSubmit={(e) => { searchHandler(e); setMobileMenu(false); }} className="flex border rounded-full overflow-hidden">
-                        <input type="text" placeholder="Search..." value={keyword} onChange={(e) => setKeyword(e.target.value)} className="w-full px-4 py-2 outline-none text-sm" />
-                        <button type="submit" className="bg-[#fed700] px-4"><Search size={16} /></button>
-                    </form>
-                    <Link to="/" onClick={() => setMobileMenu(false)} className="py-2 font-semibold">Home</Link>
-                    <Link to="/cart" onClick={() => setMobileMenu(false)} className="py-2 font-semibold">Cart ({cartQty})</Link>
-                    {userInfo ? (
-                        <>
-                            <Link to="/myorders" onClick={() => setMobileMenu(false)} className="py-2 font-semibold">My Orders</Link>
-                            {userInfo.isAdmin && <Link to="/admin/dashboard" onClick={() => setMobileMenu(false)} className="py-2 font-bold text-blue-600">Admin Panel</Link>}
-                            <button onClick={() => { logoutHandler(); setMobileMenu(false); }} className="py-2 text-red-500 font-semibold text-left">Logout</button>
-                        </>
-                    ) : (
-                        <Link to="/login" onClick={() => setMobileMenu(false)} className="py-2 font-semibold">Login / Register</Link>
-                    )}
+            {/* MOBILE NAV */}
+            {isMobileMenuOpen && (
+                <div className="fixed inset-0 z-[100] md:hidden">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
+                    <div className="absolute top-0 left-0 h-full w-72 bg-white shadow-2xl">
+                        <div className="p-5 border-b border-gray-100 bg-yellow-400 flex justify-between items-center font-bold text-sm">MENU <button onClick={() => setIsMobileMenuOpen(false)}>X</button></div>
+                        <ul className="p-4 space-y-4">
+                            {departments.slice(0, 8).map(dept => (
+                                <li key={dept.id}><Link onClick={() => setIsMobileMenuOpen(false)} to="/" className="text-sm font-medium block">{dept.name}</Link></li>
+                            ))}
+                        </ul>
+                    </div>
                 </div>
             )}
         </header>

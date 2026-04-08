@@ -5,10 +5,14 @@ import fs from 'fs';
 
 const router = express.Router();
 
-// Ensure uploads directory exists
+// Ensure uploads directory exists (local development only)
 const uploadsDir = 'uploads';
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+if (process.env.NODE_ENV !== 'production' && !fs.existsSync(uploadsDir)) {
+    try {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+    } catch (err) {
+        console.warn('Could not create uploads directory:', err.message);
+    }
 }
 
 const storage = multer.diskStorage({
@@ -44,9 +48,11 @@ router.post('/', upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
     }
+    // Normalize Windows backslashes and ensure path starts with /uploads/
+    const imagePath = '/' + req.file.path.replace(/\\/g, '/');
     res.send({
         message: 'Image uploaded successfully',
-        image: `/${req.file.path.replace(/\\\\/g, '/')}`,
+        image: imagePath,
     });
 });
 

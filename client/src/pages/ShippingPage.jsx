@@ -1,90 +1,136 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import { saveShippingAddress } from '../slices/cartSlice';
+import { ChevronRight, Truck, MapPin, CheckCircle2 } from 'lucide-react';
 
 const ShippingPage = () => {
-    const { shippingAddress } = useSelector((state) => state.cart);
-    const { userInfo } = useSelector((state) => state.auth);
-    const navigate = useNavigate();
+    const cart = useSelector((state) => state.cart);
+    const { shippingAddress } = cart;
+
+    const [address, setAddress] = useState(shippingAddress.address || '');
+    const [city, setCity] = useState(shippingAddress.city || '');
+    const [postalCode, setPostalCode] = useState(shippingAddress.postalCode || '');
+    const [country, setCountry] = useState(shippingAddress.country || '');
+    const [phone, setPhone] = useState(shippingAddress.phone || '');
+
     const dispatch = useDispatch();
-
-    const [formData, setFormData] = useState({
-        fullName: shippingAddress?.fullName || userInfo?.name || '',
-        email: shippingAddress?.email || userInfo?.email || '',
-        phone: shippingAddress?.phone || '',
-        address: shippingAddress?.address || '',
-        city: shippingAddress?.city || '',
-        postalCode: shippingAddress?.postalCode || '',
-        country: shippingAddress?.country || 'Bangladesh',
-    });
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+    const navigate = useNavigate();
 
     const submitHandler = (e) => {
         e.preventDefault();
-        dispatch(saveShippingAddress(formData));
+        dispatch(saveShippingAddress({ address, city, postalCode, country, phone }));
         navigate('/placeorder');
     };
 
-    if (!userInfo) {
-        navigate('/login?redirect=/shipping');
-        return null;
-    }
-
     return (
-        <div className="container-custom py-10 max-w-xl mx-auto">
-            {/* Step Indicator */}
-            <div className="flex items-center justify-center gap-2 mb-8 text-sm font-semibold">
-                <span className="text-green-600">Cart ✓</span>
-                <span className="w-8 h-px bg-gray-300"></span>
-                <span className="text-[#333e48] bg-[#fed700] px-3 py-1 rounded-full">Shipping</span>
-                <span className="w-8 h-px bg-gray-300"></span>
-                <span className="text-gray-400">Payment</span>
-                <span className="w-8 h-px bg-gray-300"></span>
-                <span className="text-gray-400">Confirm</span>
+        <div className="bg-gray-50 min-h-screen pb-20">
+            {/* Breadcrumb */}
+            <div className="bg-white border-b border-gray-200 mb-8">
+                <div className="container-custom py-4 flex items-center gap-2 text-sm text-gray-500">
+                    <Link to="/" className="hover:text-blue-600">Home</Link>
+                    <ChevronRight size={14} />
+                    <Link to="/cart" className="hover:text-blue-600">Cart</Link>
+                    <ChevronRight size={14} />
+                    <span className="text-gray-800 font-bold">Shipping</span>
+                </div>
             </div>
 
-            <h1 className="text-2xl font-extrabold mb-6 text-center">Shipping & Billing</h1>
-            <form onSubmit={submitHandler} className="bg-white p-6 rounded-xl border flex flex-col gap-4">
-                <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name *</label>
-                    <input type="text" name="fullName" required value={formData.fullName} onChange={handleChange} className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Email *</label>
-                        <input type="email" name="email" required value={formData.email} onChange={handleChange} className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Phone *</label>
-                        <input type="text" name="phone" required placeholder="+880..." value={formData.phone} onChange={handleChange} className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Full Address *</label>
-                    <input type="text" name="address" required placeholder="House, Road, Area" value={formData.address} onChange={handleChange} className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">City *</label>
-                        <input type="text" name="city" required value={formData.city} onChange={handleChange} className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Postal Code</label>
-                        <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Country</label>
-                        <input type="text" name="country" value={formData.country} onChange={handleChange} className="w-full border p-3 rounded-lg outline-none focus:border-[#fed700] transition" />
+            <div className="container-custom">
+                {/* Checkout Steps */}
+                <div className="flex justify-center mb-12">
+                    <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest">
+                        <div className="flex items-center gap-2 text-green-600">
+                            <CheckCircle2 size={16} /> <span>Cart</span>
+                        </div>
+                        <div className="w-12 h-px bg-gray-200" />
+                        <div className="flex items-center gap-2 text-blue-600">
+                            <MapPin size={16} /> <span>Shipping</span>
+                        </div>
+                        <div className="w-12 h-px bg-gray-200" />
+                        <div className="flex items-center gap-2 text-gray-300">
+                            <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">3</span> <span>Place Order</span>
+                        </div>
                     </div>
                 </div>
-                <button type="submit" className="w-full bg-[#fed700] text-[#333e48] font-extrabold py-3 rounded-full mt-2 hover:bg-yellow-500 transition shadow text-base">
-                    Continue to Payment
-                </button>
-            </form>
+
+                <div className="max-w-xl mx-auto">
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 bg-gray-50">
+                            <h1 className="text-xl font-bold text-gray-800 uppercase tracking-tight flex items-center gap-2">
+                                <Truck size={20} /> Shipping Details
+                            </h1>
+                        </div>
+                        <div className="p-8">
+                            <form onSubmit={submitHandler} className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-gray-500">Address</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter address"
+                                        className="w-full bg-white border border-gray-200 p-3 rounded-lg outline-none focus:border-yellow-400 text-sm"
+                                        value={address}
+                                        required
+                                        onChange={(e) => setAddress(e.target.value)}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-gray-500">City</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter city"
+                                            className="w-full bg-white border border-gray-200 p-3 rounded-lg outline-none focus:border-yellow-400 text-sm"
+                                            value={city}
+                                            required
+                                            onChange={(e) => setCity(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase text-gray-500">Postal Code</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter postal code"
+                                            className="w-full bg-white border border-gray-200 p-3 rounded-lg outline-none focus:border-yellow-400 text-sm"
+                                            value={postalCode}
+                                            required
+                                            onChange={(e) => setPostalCode(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-gray-500">Country</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter country"
+                                        className="w-full bg-white border border-gray-200 p-3 rounded-lg outline-none focus:border-yellow-400 text-sm"
+                                        value={country}
+                                        required
+                                        onChange={(e) => setCountry(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase text-gray-500">Phone Number</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter phone number"
+                                        className="w-full bg-white border border-gray-200 p-3 rounded-lg outline-none focus:border-yellow-400 text-sm"
+                                        value={phone}
+                                        required
+                                        onChange={(e) => setPhone(e.target.value)}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    className="btn-electro w-full h-12 uppercase mt-6"
+                                >
+                                    Continue to Order Review
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
